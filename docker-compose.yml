@@ -1,23 +1,25 @@
+version: '3.9'
+
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: restaurant-postgres
+    container_name: restuarant-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-restaurant_db}
-      POSTGRES_USER: ${POSTGRES_USER:-restaurant_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-restaurant_password}
+      POSTGRES_DB: ${POSTGRES_DB:-restuarant_db}
+      POSTGRES_USER: ${POSTGRES_USER:-restuarant_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-restuarant_password}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - restaurant-network
+      - restuarant-network
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          'pg_isready -U ${POSTGRES_USER:-restaurant_user} -d ${POSTGRES_DB:-restaurant_db}',
+          'pg_isready -U ${POSTGRES_USER:-restuarant_user} -d ${POSTGRES_DB:-restuarant_db}',
         ]
       interval: 10s
       timeout: 5s
@@ -25,8 +27,8 @@ services:
 
   # RabbitMQ Message Queue
   rabbitmq:
-    image: rabbitmq:4.1-management-alpine
-    container_name: restaurant-rabbitmq
+    image: rabbitmq:3.13-management-alpine
+    container_name: restuarant-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin123}
@@ -36,7 +38,7 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
-      - restaurant-network
+      - restuarant-network
     healthcheck:
       test: ['CMD', 'rabbitmq-diagnostics', 'ping']
       interval: 10s
@@ -48,12 +50,12 @@ services:
     build:
       context: .
       dockerfile: apps/auth/Dockerfile
-    container_name: restaurant-auth-service
+    container_name: restuarant-auth-service
     ports:
       - '3001:3001'
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-restaurant_user}:${POSTGRES_PASSWORD:-restaurant_password}@postgres:5432/${POSTGRES_DB:-restaurant_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-restuarant_user}:${POSTGRES_PASSWORD:-restuarant_password}@postgres:5432/${POSTGRES_DB:-restuarant_db}
       JWT_SECRET: ${JWT_SECRET:-your-jwt-secret}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
@@ -65,7 +67,7 @@ services:
       - ./nest-cli.json:/app/nest-cli.json
       - ./tsconfig.json:/app/tsconfig.json
     networks:
-      - restaurant-network
+      - restuarant-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,17 +75,17 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Restaurant API Service
-  restaurant-api-service:
+  # restuarant API Service
+  restuarant-api-service:
     build:
       context: .
       dockerfile: apps/restuarant-api/Dockerfile
-    container_name: restaurant-api-service
+    container_name: restuarant-api-service
     ports:
       - '3002:3002'
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-restaurant_user}:${POSTGRES_PASSWORD:-restaurant_password}@postgres:5432/${POSTGRES_DB:-restaurant_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-restuarant_user}:${POSTGRES_PASSWORD:-restuarant_password}@postgres:5432/${POSTGRES_DB:-restuarant_db}
       AUTH_SERVICE_URL: http://auth-service:3001
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
     volumes:
@@ -94,13 +96,41 @@ services:
       - ./nest-cli.json:/app/nest-cli.json
       - ./tsconfig.json:/app/tsconfig.json
     networks:
-      - restaurant-network
+      - restuarant-network
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
       auth-service:
+        condition: service_started
+    restart: unless-stopped
+
+  # API Gateway Service
+  gateway-service:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    container_name: restuarant-gateway-service
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      AUTH_SERVICE_URL: http://auth-service:3001
+      restuarant_SERVICE_URL: http://restuarant-api-service:3002
+    volumes:
+      - ./node_modules:/app/node_modules
+      - ./apps/gateway:/app/apps/gateway
+      - ./libs:/app/libs
+      - ./package.json:/app/package.json
+      - ./nest-cli.json:/app/nest-cli.json
+      - ./tsconfig.json:/app/tsconfig.json
+    networks:
+      - restuarant-network
+    depends_on:
+      auth-service:
+        condition: service_started
+      restuarant-api-service:
         condition: service_started
     restart: unless-stopped
 
@@ -111,5 +141,5 @@ volumes:
     driver: local
 
 networks:
-  restaurant-network:
+  restuarant-network:
     driver: bridge

@@ -1,13 +1,13 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import morgan from 'morgan';
+import * as morgan from 'morgan';
 import { AuthModule } from './auth.module';
-import cors from 'cors';
+import * as cors from 'cors';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import helmet from 'helmet';
 import { join } from 'path';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 process.env.TZ = 'Asia/Kolkata';
 
@@ -31,15 +31,17 @@ async function bootstrap() {
   const configService = app.get<ConfigService>(ConfigService);
   const PORT = configService.get('PORT') || process.env.PORT || 3001;
 
-  // Swagger configuration
-  const config = new DocumentBuilder()
-    .setTitle('Auth API')
-    .setDescription('Authentication and Authorization API')
-    .setVersion('1.0')
-    .addTag('auth')
-    .addTag('users')
-    .addBearerAuth()
-    .build();
+  // Microservice for RabbitMQ
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [
+        process.env.RABBITMQ_URL || 'amqp://admin:admin123@localhost:5672',
+      ],
+      queue: 'auth_queue',
+      queueOptions: { durable: false },
+    },
+  });
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -68,43 +70,6 @@ async function bootstrap() {
     process.exit(1);
   });
 
-  // Swagger setup with enhanced configuration
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: 'none',
-      filter: true,
-      showRequestDuration: true,
-    },
-    customSiteTitle: 'Auth API Documentation',
-    customCss: `
-      .swagger-ui .topbar { display: none }
-      .swagger-ui .info .title { color: #333; font-size: 24px; }
-    `,
-    customJs: `
-      window.onload = function() {
-        const storedToken = localStorage.getItem('auth_api_token');
-        if (storedToken) {
-          const bearerInput = document.querySelector('input[placeholder="Bearer token"]');
-          if (bearerInput) {
-            bearerInput.value = storedToken;
-          }
-        }
-        
-        const authorizeBtn = document.querySelector('button[class*="authorize"]');
-        if (authorizeBtn) {
-          authorizeBtn.onclick = function() {
-            const bearerInput = document.querySelector('input[placeholder="Bearer token"]');
-            if (bearerInput) {
-              localStorage.setItem('auth_api_token', bearerInput.value);
-            }
-          };
-        }
-      };
-    `,
-  });
-
   // Health check endpoint
   app.use('/health', (req, res) => {
     res.status(200).json({
@@ -115,10 +80,14 @@ async function bootstrap() {
     });
   });
 
+  await app.startAllMicroservices();
   await app.listen(PORT, () => {
     Logger.log(`🚀 Auth API Server Started at ${PORT}`);
-    Logger.log(`📚 API Documentation: http://localhost:${PORT}/docs`);
     Logger.log(`🏥 Health Check: http://localhost:${PORT}/health`);
+    Logger.log(
+      `📚 API Documentation available through Gateway: http://localhost:3000/docs`,
+    );
+    Logger.log(`📡 Auth microservice listening on RabbitMQ queue: auth_queue`);
   });
 }
 

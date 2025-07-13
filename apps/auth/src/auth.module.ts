@@ -13,8 +13,8 @@ import { User } from '../../../libs/common/src/entities/user.entity';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.POSTGRES_HOST || 'localhost',
-      port: parseInt(process.env.POSTGRES_PORT, 10) || 5432,
+      host: process.env.POSTGRES_HOST || 'postgres',
+      port: parseInt(process.env.POSTGRES_PORT || '5432', 10),
       username: process.env.POSTGRES_USER || 'restaurant_user',
       password: process.env.POSTGRES_PASSWORD || 'restaurant_password',
       database: process.env.POSTGRES_DB || 'restaurant_db',
