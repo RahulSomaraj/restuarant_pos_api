@@ -6,13 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, UserRole } from '../../../libs/common/src/entities/user.entity';
+import { User, UserRole } from '@app/common/entities/user.entity';
 import {
   RegisterDto,
   SignupResponseDto,
   LoginDto,
   AuthResponseDto,
-} from '../../../libs/common/src/dto/auth.dto';
+} from '@app/common/dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import {
   MessagePattern,

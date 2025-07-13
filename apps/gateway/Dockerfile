@@ -1,15 +1,18 @@
 # Development Dockerfile for API Gateway Service
-FROM node:18-alpine
+FROM node:24-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files (node_modules will be mounted as volume)
+# Copy package files
 COPY package*.json ./
 COPY nest-cli.json ./
 COPY tsconfig*.json ./
 
-# Create node_modules directory (will be mounted from host)
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Create node_modules directory (will be mounted from host in dev)
 RUN mkdir -p node_modules
 
 # Expose port
@@ -19,5 +22,9 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
-# Start the application in development mode
-CMD ["npm", "run", "start:dev", "gateway"] 
+# Copy startup script
+COPY start-service.sh ./
+RUN chmod +x start-service.sh
+
+# Start the application in development mode with polling
+CMD ["./start-service.sh", "gateway"] 

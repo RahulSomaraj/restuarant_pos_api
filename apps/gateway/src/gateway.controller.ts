@@ -19,7 +19,7 @@ import {
   SignupResponseDto,
   LoginDto,
   AuthResponseDto,
-} from '../../../libs/common/src/dto/auth.dto';
+} from '@app/common/dto/auth.dto';
 import { firstValueFrom } from 'rxjs';
 
 @ApiTags('gateway')
@@ -47,6 +47,7 @@ export class GatewayController {
       );
       return result;
     } catch (error) {
+      console.log(error);
       if (error?.status === 409) {
         throw new HttpException(
           error.message || 'Email already registered',

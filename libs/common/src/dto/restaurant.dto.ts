@@ -50,15 +50,6 @@ export class CreateMenuItemDto {
   isAvailable?: boolean;
 }
 
-export class CreateOrderDto {
-  @ApiProperty({
-    description: 'Array of order items',
-    type: [CreateOrderItemDto],
-  })
-  @IsArray()
-  items: CreateOrderItemDto[];
-}
-
 export class CreateOrderItemDto {
   @ApiProperty({
     description: 'Menu item ID',
@@ -73,6 +64,15 @@ export class CreateOrderItemDto {
   })
   @IsNumber()
   quantity: number;
+}
+
+export class CreateOrderDto {
+  @ApiProperty({
+    description: 'Array of order items',
+    type: [CreateOrderItemDto],
+  })
+  @IsArray()
+  items: CreateOrderItemDto[];
 }
 
 export class OrderResponseDto {

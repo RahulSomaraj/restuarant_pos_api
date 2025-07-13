@@ -25,6 +25,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: restuarant-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - restuarant-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
   # RabbitMQ Message Queue
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -59,17 +76,21 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-jwt-secret}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
     volumes:
       - ./node_modules:/app/node_modules
       - ./apps/auth:/app/apps/auth
       - ./libs:/app/libs
       - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
       - ./nest-cli.json:/app/nest-cli.json
       - ./tsconfig.json:/app/tsconfig.json
     networks:
       - restuarant-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -88,17 +109,21 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-restuarant_user}:${POSTGRES_PASSWORD:-restuarant_password}@postgres:5432/${POSTGRES_DB:-restuarant_db}
       AUTH_SERVICE_URL: http://auth-service:3001
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-admin}:${RABBITMQ_PASSWORD:-admin123}@rabbitmq:5672
+      REDIS_URL: redis://redis:6379
     volumes:
       - ./node_modules:/app/node_modules
       - ./apps/restuarant-api:/app/apps/restuarant-api
       - ./libs:/app/libs
       - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
       - ./nest-cli.json:/app/nest-cli.json
       - ./tsconfig.json:/app/tsconfig.json
     networks:
       - restuarant-network
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -118,11 +143,13 @@ services:
       NODE_ENV: ${NODE_ENV:-development}
       AUTH_SERVICE_URL: http://auth-service:3001
       restuarant_SERVICE_URL: http://restuarant-api-service:3002
+      REDIS_URL: redis://redis:6379
     volumes:
       - ./node_modules:/app/node_modules
       - ./apps/gateway:/app/apps/gateway
       - ./libs:/app/libs
       - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
       - ./nest-cli.json:/app/nest-cli.json
       - ./tsconfig.json:/app/tsconfig.json
     networks:
@@ -138,6 +165,8 @@ volumes:
   postgres_data:
     driver: local
   rabbitmq_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

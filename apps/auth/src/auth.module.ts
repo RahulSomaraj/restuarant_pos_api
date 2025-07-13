@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { User } from '../../../libs/common/src/entities/user.entity';
+import { User } from '@app/common/entities/user.entity';
 
 @Module({
   imports: [

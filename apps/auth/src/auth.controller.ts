@@ -1,14 +1,12 @@
 import { Controller, Post, Body, HttpStatus, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import {
-  RegisterDto,
-  SignupResponseDto,
-} from '../../../libs/common/src/dto/auth.dto';
+import { RegisterDto, SignupResponseDto } from '@app/common/dto/auth.dto';
 
 @ApiTags('auth')
 @Controller()
 export class AuthController {
+  // File watching test - this comment was added to test auto-restart
   constructor(private readonly authService: AuthService) {}
 
   @Post('signup')
